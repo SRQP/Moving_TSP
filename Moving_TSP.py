@@ -172,6 +172,8 @@ class Moving_TSP:
 
     def problem_graph_1(self): # define the first part of the problem as a graph
         graph = []
+        max = 141
+        M = 2*max*(self.m + self.T) # an approximate upperbound on M
         coord = self.create_coord_matrix()
 
         for row in range(1 + self.T*self.m):
@@ -187,11 +189,11 @@ class Moving_TSP:
                             if j != 0:
                                 d_1 = self.distance(coord[i][j][0], coord[i][j][1], coord[k][l][0], coord[k][l][1])
                                 if d_1/self.V[0][2] <= l - j:
-                                    graph[1 + (i)*self.T + (j - 1)][1 + (k)*self.T + l] = d_1 + 10000 # arbitrary large cost
+                                    graph[1 + (i)*self.T + (j - 1)][1 + (k)*self.T + l] = d_1 + M
                             elif j == 0:
                                 d_2 = self.distance(coord[i][j][0], coord[i][j][1], coord[k][l][0], coord[k][l][1])
                                 if d_2/self.V[0][2] <= l - j:
-                                    graph[1 + (i)*self.T + (self.T - 1)][1 + (k)*self.T + l] = d_2 + 10000
+                                    graph[1 + (i)*self.T + (self.T - 1)][1 + (k)*self.T + l] = d_2 + M
         
         for i in range(self.m): # make a directed cycle of cost 0 within each set as per Noon Bean.
             for j in range(self.T):
@@ -204,8 +206,8 @@ class Moving_TSP:
             for j in range(self.T):
                 d_3 = self.distance(self.V[0][0], self.V[0][1], coord[i][j][0], coord[i][j][1])
                 if d_3/self.V[0][2] <= j:
-                    graph[0][1 + (i)*self.T + j] = d_3 + 10000 # for now assume, vehicle to target and target to vehicle is same cost
-                graph[1 + (i)*self.T + j][0] = d_3 + 10000
+                    graph[0][1 + (i)*self.T + j] = d_3 + M # for now assume, vehicle to target and target to vehicle is same cost
+                graph[1 + (i)*self.T + j][0] = d_3 + M
         
         for i in range(len(graph)):
             for j in range(len(graph)):
@@ -225,12 +227,12 @@ class Moving_TSP:
 
 # Test everything out here
 V = [[10, 10, 300]]
-P = Moving_TSP(100, 3, 2, V)
+P = Moving_TSP(100, 100, 5, V)
 P.add_circle_trajectories(70, 70, 10, 0, -3)
-#P.add_circle_trajectories(80, 20, 10, 1.7, 3)
-#P.add_circle_trajectories(50, 50, 20, 0, 5)
+P.add_circle_trajectories(80, 20, 10, 1.7, 3)
+P.add_circle_trajectories(50, 50, 20, 0, 5)
 P.add_line_trajectories(0, 0, 1, 0.5)
-#P.add_line_trajectories(20, 99, -0.2, -1.25)
+P.add_line_trajectories(20, 99, -0.2, -1.25)
 print(P.circle_trajectories)
 A = P.circle(70, 70, 10, 0, -3, 0)    
 print(A[0])    
