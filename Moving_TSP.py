@@ -184,7 +184,7 @@ class Moving_TSP:
         for i in range(self.m): # check if edges can be created between sets. If true, make the edge as per Noon Bean.
             for j in range(self.T):
                 for k in range(self.m):
-                    for l in range(j+1, self.T):
+                    for l in range(j, self.T): # j + 1 is faster, but targets might occupy the same position. Hence j
                         if k != i:
                             if j != 0:
                                 d_1 = self.distance(coord[i][j][0], coord[i][j][1], coord[k][l][0], coord[k][l][1])
@@ -209,23 +209,58 @@ class Moving_TSP:
                     graph[0][1 + (i)*self.T + j] = d_3 + M # for now assume, vehicle to target and target to vehicle is same cost
                 graph[1 + (i)*self.T + j][0] = d_3 + M
         
-        for i in range(len(graph)):
+        for i in range(len(graph)): # change the input entries to integer form for LKH
             for j in range(len(graph)):
                 graph[i][j] = int(graph[i][j])
         
         return graph
 
-    
+    def problem_feasible_sol_1(self, F): # Extract the feasible sol to one in a set from the LKH sol for ATSP
+        P = []
+        for i in range(self.m):
+            k = 1 + i*self.T
+            j = (F[k] - 1)/self.T
+            if j - int(j) == 0:
+                j = int(j) - 1
+            else:
+                j = int(j)
+            l = (F[k] - 1) - j*self.T 
+            P.append([F[k], j, l])
+        return P
+
+    def plot_feasible_sol_1(self, F, coord_matrix): # plot the feasible sol to one in a set TSP
+        Plot = self.problem_feasible_sol_1(F)
+        Plot_X = []
+        Plot_Y = []
+        Plot_X_Scatter = []
+        Plot_Y_Scatter = []
+        Plot_Matrix = self.plot_trajectories()
+        for i in range(len(Plot_Matrix[0])):
+            plt.plot(Plot_Matrix[0][i], Plot_Matrix[1][i])
+        Plot_X.append(self.V[0][0])
+        Plot_Y.append(self.V[0][1])
+        for i in range(len(Plot)):
+            Plot_X.append(coord_matrix[Plot[i][1]][Plot[i][2] - 1][0])
+            Plot_Y.append(coord_matrix[Plot[i][1]][Plot[i][2] - 1][1])
+            Plot_X_Scatter.append(coord_matrix[Plot[i][1]][Plot[i][2] - 1][0])
+            Plot_Y_Scatter.append(coord_matrix[Plot[i][1]][Plot[i][2] - 1][1])
+            print(coord_matrix[Plot[i][1]][Plot[i][2] - 1][0], coord_matrix[Plot[i][1]][Plot[i][2] - 1][1])
+        Plot_X.append(self.V[0][0])
+        Plot_Y.append(self.V[0][1])
+        plt.plot(Plot_X, Plot_Y, 'r')
+        plt.scatter(Plot_X_Scatter, Plot_Y_Scatter, c ='r')
+        plt.scatter(self.V[0][0], self.V[0][1], c = 'b')
+        plt.xlabel('x (m)')
+        plt.ylabel('y (m)')
+        plt.title('Feasible solution to Moving TSP')
+        plt.show()
 
 
-
-
-
-
-
+        
 
 
 # Test everything out here
+
 V = [[10, 10, 300]]
 P = Moving_TSP(100, 100, 5, V)
 P.add_circle_trajectories(70, 70, 10, 0, -3)
@@ -233,17 +268,16 @@ P.add_circle_trajectories(80, 20, 10, 1.7, 3)
 P.add_circle_trajectories(50, 50, 20, 0, 5)
 P.add_line_trajectories(0, 0, 1, 0.5)
 P.add_line_trajectories(20, 99, -0.2, -1.25)
-print(P.circle_trajectories)
-A = P.circle(70, 70, 10, 0, -3, 0)    
-print(A[0])    
-coord_matrix = P.create_coord_matrix()
-print(coord_matrix)    
+coord_matrix = P.create_coord_matrix()  
 P.visualize()
 graph_1 = P.problem_graph_1()
-print(graph_1)
 
 LKH_1 = LKH_file_generator(graph_1, '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1.tsp', 
 '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1.par', '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1sol')
 LKH_1.create_cost_matrix_TSP()
 LKH_1.create_cost_matrix_PAR()
-print(P.distance(10, 10, coord_matrix[1][0][0], coord_matrix[1][0][1]))
+F = LKH_1.read_sol()
+
+P.plot_feasible_sol_1(F, coord_matrix)
+
+
