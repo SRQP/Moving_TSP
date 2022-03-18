@@ -1,8 +1,6 @@
-import string
 import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
-import os
 
 # Create a file generator class for LKH
 
@@ -248,16 +246,28 @@ class Moving_TSP:
         Plot_X.append(self.V[0][0])
         Plot_Y.append(self.V[0][1])
         plt.plot(Plot_X, Plot_Y, 'r')
-        plt.scatter(Plot_X_Scatter, Plot_Y_Scatter, c ='r')
-        plt.scatter(self.V[0][0], self.V[0][1], c = 'b')
+        plt.scatter(Plot_X_Scatter, Plot_Y_Scatter, c ='r', label = 'Target')
+        plt.scatter(self.V[0][0], self.V[0][1], c = 'b', label = 'Depot')
+        plt.legend(loc = 'upper left')
+        plt.ylim(0, 100)
+        for i in range(len(Plot)):
+            if Plot[i][1] <= len(self.circle_trajectories) - 1:
+                dx = coord_matrix[Plot[i][1]][Plot[i][2] - 1][0] - self.circle_trajectories[Plot[i][1]][0]
+                dy = coord_matrix[Plot[i][1]][Plot[i][2] - 1][1] - self.circle_trajectories[Plot[i][1]][1]
+                if self.circle_trajectories[Plot[i][1]][4] < 0:
+                    plt.arrow(Plot_X_Scatter[i], Plot_Y_Scatter[i], -dy/2, dx/2, width = 0.5, ec = 'green')
+                elif self.circle_trajectories[Plot[i][1]][4] > 0:
+                    plt.arrow(Plot_X_Scatter[i], Plot_Y_Scatter[i], dy/2, -dx/2, width = 0.5, ec = 'green')
+                plt.text(Plot_X_Scatter[i] + 1.5, Plot_Y_Scatter[i] + 1.5, str(abs(self.circle_trajectories[Plot[i][1]][4])))
+            elif Plot[i][1] > len(self.circle_trajectories) - 1:
+                dx = self.line_trajectories[Plot[i][1] - len(self.circle_trajectories)][2]
+                dy = self.line_trajectories[Plot[i][1] - len(self.circle_trajectories)][3]
+                plt.arrow(Plot_X_Scatter[i], Plot_Y_Scatter[i], 4*dx, 4*dy, width = 0.5, ec = 'green')
+                plt.text(Plot_X_Scatter[i] + 1.5, Plot_Y_Scatter[i] + 1.5, str(round((dx**2 + dy**2)**0.5, 2)))
         plt.xlabel('x (m)')
         plt.ylabel('y (m)')
         plt.title('Feasible solution to Moving TSP')
         plt.show()
-
-
-        
-
 
 # Test everything out here
 
@@ -268,6 +278,7 @@ P.add_circle_trajectories(80, 20, 10, 1.7, 3)
 P.add_circle_trajectories(50, 50, 20, 0, 5)
 P.add_line_trajectories(0, 0, 1, 0.5)
 P.add_line_trajectories(20, 99, -0.2, -1.25)
+#P.add_line_trajectories(0, 0, 0.5, 1)
 coord_matrix = P.create_coord_matrix()  
 P.visualize()
 graph_1 = P.problem_graph_1()
@@ -279,5 +290,3 @@ LKH_1.create_cost_matrix_PAR()
 F = LKH_1.read_sol()
 
 P.plot_feasible_sol_1(F, coord_matrix)
-
-
