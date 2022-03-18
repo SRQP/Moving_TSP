@@ -177,21 +177,21 @@ class Moving_TSP:
         for row in range(1 + self.T*self.m):
             graph.append([])
             for col in range(1 + self.T*self.m):
-                graph[row].append(999999999)
+                graph[row].append(9999999)
 
         for i in range(self.m): # check if edges can be created between sets. If true, make the edge as per Noon Bean.
             for j in range(self.T):
                 for k in range(self.m):
                     for l in range(j+1, self.T):
                         if k != i:
-                            if j != self.T - 1:
-                                d_1 = self.distance(coord[i][j+1][0], coord[i][j+1][1], coord[k][l][0], coord[k][l][1])
+                            if j != 0:
+                                d_1 = self.distance(coord[i][j][0], coord[i][j][1], coord[k][l][0], coord[k][l][1])
                                 if d_1/self.V[0][2] <= l - j:
-                                    graph[1 + (i)*self.T + j][1 + (k)*self.T + l] = d_1 + 999999 # arbitrary large cost
-                            elif j == self.T - 1:
-                                d_2 = self.distance(coord[i][0][0], coord[i][0][1], coord[k][l][0], coord[k][l][1])
+                                    graph[1 + (i)*self.T + (j - 1)][1 + (k)*self.T + l] = d_1 + 10000 # arbitrary large cost
+                            elif j == 0:
+                                d_2 = self.distance(coord[i][j][0], coord[i][j][1], coord[k][l][0], coord[k][l][1])
                                 if d_2/self.V[0][2] <= l - j:
-                                    graph[1 + (i)*self.T + j][1 + (k)*self.T + l] = d_2 + 999999
+                                    graph[1 + (i)*self.T + (self.T - 1)][1 + (k)*self.T + l] = d_2 + 10000
         
         for i in range(self.m): # make a directed cycle of cost 0 within each set as per Noon Bean.
             for j in range(self.T):
@@ -204,12 +204,11 @@ class Moving_TSP:
             for j in range(self.T):
                 d_3 = self.distance(self.V[0][0], self.V[0][1], coord[i][j][0], coord[i][j][1])
                 if d_3/self.V[0][2] <= j:
-                    graph[0][1 + (i)*self.T + j] = d_3 + 999999 # for now assume, vehicle to target and target to vehicle is same cost
-                    graph[1 + (i)*self.T + j][0] = d_3 + 999999
+                    graph[0][1 + (i)*self.T + j] = d_3 + 10000 # for now assume, vehicle to target and target to vehicle is same cost
+                graph[1 + (i)*self.T + j][0] = d_3 + 10000
         
         for i in range(len(graph)):
             for j in range(len(graph)):
-                graph[i][i] = 0
                 graph[i][j] = int(graph[i][j])
         
         return graph
@@ -226,12 +225,12 @@ class Moving_TSP:
 
 # Test everything out here
 V = [[10, 10, 300]]
-P = Moving_TSP(100, 100, 5, V)
+P = Moving_TSP(100, 3, 2, V)
 P.add_circle_trajectories(70, 70, 10, 0, -3)
-P.add_circle_trajectories(80, 20, 10, 1.7, 3)
-P.add_circle_trajectories(50, 50, 20, 0, 5)
+#P.add_circle_trajectories(80, 20, 10, 1.7, 3)
+#P.add_circle_trajectories(50, 50, 20, 0, 5)
 P.add_line_trajectories(0, 0, 1, 0.5)
-P.add_line_trajectories(20, 99, -0.2, -1.25)
+#P.add_line_trajectories(20, 99, -0.2, -1.25)
 print(P.circle_trajectories)
 A = P.circle(70, 70, 10, 0, -3, 0)    
 print(A[0])    
@@ -239,8 +238,10 @@ coord_matrix = P.create_coord_matrix()
 print(coord_matrix)    
 P.visualize()
 graph_1 = P.problem_graph_1()
+print(graph_1)
 
 LKH_1 = LKH_file_generator(graph_1, '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1.tsp', 
 '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1.par', '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1sol')
 LKH_1.create_cost_matrix_TSP()
 LKH_1.create_cost_matrix_PAR()
+print(P.distance(10, 10, coord_matrix[1][0][0], coord_matrix[1][0][1]))
