@@ -65,13 +65,14 @@ class LKH_file_generator:
 
 class Moving_TSP:
 
-    def __init__(self, num_cells, T):
+    def __init__(self, num_cells, T, m, V):
         self.num_cells = num_cells  # how many rows and cols does our grid map have
         self.T = T # we assume the animation runs for T frames before it stops
+        self.V = V # contains info about the vehicle(s): x,y coordinates of the depot, and the speed
         self.circle_trajectories = [] # all the info for circular trajectories for the problem will be appended within this matrix
         self.line_trajectories = [] # all the info for line trajectories for the problem will be appended within this matrix
-        self.m = len(self.circle_trajectories + self.line_trajectories)# the total number of targets that we have
-        self.M = np.zeros((self.num_cells, self.num_cells, self.T))
+        self.m = m # the total number of targets that we have
+        self.M = np.zeros((self.num_cells, self.num_cells, self.T)) # the grid map that gets updated every frame
         
     def circle(self, x_center, y_center, R, theta_init, spd, t):
         X = []
@@ -154,7 +155,7 @@ class Moving_TSP:
             im.set_array(self.M[:,:,t])
             title.set_text("Time = " + str(t) + " s")
         ani = matplotlib.animation.FuncAnimation(fig, func=update, frames=self.T, repeat=False, interval=400)
-        # Plot the circle and line paths the object moves over
+        # Plot the circle and line trajectories the object moves over
         for i in range(len(self.plot_trajectories()[0])):
             plt.plot(self.plot_trajectories()[0][i], self.plot_trajectories()[1][i]) 
         plt.xlabel('x (m)')
@@ -165,8 +166,21 @@ class Moving_TSP:
         writervideo = matplotlib.animation.FFMpegWriter(fps=3) 
         ani.save(f, writer=writervideo)
 
-    def problem_graph(self):
-        pass
+    def distance(self, x_1, y_1, x_2, y_2):
+        d = ((x_2 - x_1)**2 + (y_2 - y_1)**2)**0.5
+        return d
+
+    def problem_graph_1(self): # define the first part of the problem as a graph
+        graph = 9999999*np.ones((1 + self.T*self.m, 1 + self.T*self.m))
+        for i in range(self.m):
+            for j in range(self.T):
+                for k in range(self.m):
+                    for l in range(self.T):
+                        if k != i:
+                            graph[1 + (i)*self.T + j][1 + (k)*self.T + l] = 0
+        print(graph)
+
+        
 
 
 
@@ -177,7 +191,8 @@ class Moving_TSP:
 
 
 # Test everything out here
-P = Moving_TSP(100, 100)
+V = [[10, 10, 5]]
+P = Moving_TSP(100, 3, 5, V)
 P.add_circle_trajectories(70, 70, 10, 0, -3)
 P.add_circle_trajectories(80, 20, 10, 1.7, 3)
 P.add_circle_trajectories(50, 50, 20, 0, 5)
@@ -189,3 +204,4 @@ print(A[0])
 coord_matrix = P.create_coord_matrix()
 #print(coord_matrix)    
 P.visualize()
+P.problem_graph_1()
