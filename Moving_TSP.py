@@ -1,91 +1,191 @@
+import string
+import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation
+import os
 
-class Paths:
+# Create a file generator class for LKH
+
+class LKH_file_generator:
+
+    def __init__(self, C, filename_tsp, filename_par, filename_sol):
+        self.C = C
+        self.filename_tsp = filename_tsp
+        self.filename_par = filename_par
+        self.filename_sol = filename_sol
+
+    def compile_row_string(self, a_row):
+        return str(a_row).strip(']').strip('[').replace(',','')
+
+    def create_TSP(self, name = 'test'): # here, the user inputs the cities, and their coords into the C matrix.
+        with open(self.filename_tsp, 'w') as f:
+            f.write('NAME : %s\n' % name)
+            f.write('COMMENT : few cities test problem\n')
+            f.write('TYPE : ATSP\n')
+            f.write('DIMENSION : %d\n' % len(self.C))
+            f.write('EDGE_WEIGHT_TYPE : EUC_2D\n')
+            f.write('NODE_COORD_SECTION\n')
+            for row in self.C:
+                f.write('%d %d %d\n' % (row[0], row[1], row[2]))
+            f.write('EOF\n')
+
+    def create_cost_matrix_TSP(self, name = 'test_1'): # here, the user can input the cost matrix directly.
+        with open(self.filename_tsp, 'w') as f:
+            f.write('NAME : %s\n' % name)
+            f.write('COMMENT : few cities test problem\n')
+            f.write('TYPE : ATSP\n')
+            f.write('DIMENSION : %d\n' % len(self.C))
+            f.write('EDGE_WEIGHT_TYPE : EXPLICIT\n')
+            f.write('EDGE_WEIGHT_FORMAT : FULL_MATRIX\n')
+            f.write('EDGE_WEIGHT_SECTION\n')
+            for row in self.C:
+                f.write(self.compile_row_string(row) + '\n')
+            f.write('EOF\n')
+
+    def create_PAR(self, name = 'test.tsp', tour = 'testsol'):
+        with open(self.filename_par, 'w') as f:
+            f.write('PROBLEM_FILE = %s\n' % name)
+            f.write('TOUR_FILE = %s\n' % tour)
+            f.write('RUNS = 10')
+
+    def create_cost_matrix_PAR(self, name = 'test_1.tsp', tour = 'test_1sol'):
+        with open(self.filename_par, 'w') as f:
+            f.write('PROBLEM_FILE = %s\n' % name)
+            f.write('TOUR_FILE = %s\n' % tour)
+            f.write('RUNS = 10')
+
+    def read_sol(self):
+        F = []
+        with open(self.filename_sol) as f:
+            for index, line in enumerate(f):
+                if index > 5 and index < len(self.C) + 6:
+                    F.append(int(line))
+        return F      
+
+
+class Moving_TSP:
 
     def __init__(self, num_cells, T):
         self.num_cells = num_cells  # how many rows and cols does our grid map have
         self.T = T # we assume the animation runs for T frames before it stops
-
-    def circle(self, M, x_center, y_center, R, theta_init, spd, t):
+        self.circle_trajectories = [] # all the info for circular trajectories for the problem will be appended within this matrix
+        self.line_trajectories = [] # all the info for line trajectories for the problem will be appended within this matrix
+        self.m = len(self.circle_trajectories + self.line_trajectories)# the total number of targets that we have
+        self.M = np.zeros((self.num_cells, self.num_cells, self.T))
+        
+    def circle(self, x_center, y_center, R, theta_init, spd, t):
         X = []
         Y = []
         omega = spd/R
         theta = theta_init + omega*t # angle theta when the angular speed is set to be a constant
-        i = int(y_center) + int(R*np.sin(theta)) # the col position of the vehicle
-        j = int(x_center) + int(R*np.cos(theta)) # the row position of the vehicle
+        x = x_center + R*np.cos(theta) # actual x coordinate of target
+        y = y_center + R*np.sin(theta) # actual y coordinate of target
+        i = int(y_center) + int(R*np.sin(theta)) # the row position of the target for animation
+        j = int(x_center) + int(R*np.cos(theta)) # the col position of the target for animation
         Theta = np.linspace(0, 2*np.pi, 1000)
         for elem in Theta:
-            X.append(x_center + R*np.cos(elem)) # a continuous solid curve for the path
+            X.append(x_center + R*np.cos(elem)) # a continuous solid curve for the path for animation
             Y.append(y_center + R*np.sin(elem))
-        M[i, j, t] = 1
-        return (M, X, Y, i, j)
+        self.M[i, j, t] = 1
+        return [x, y, X, Y, i, j]
 
-    def line(self, M, x_init, y_init, v_x, v_y, t):
+    def line(self, x_init, y_init, v_x, v_y, t):
         X = []
         Y = []
-        i = int(y_init) + int(v_y*t)
-        j = int(x_init) + int(v_x*t)
+        x = x_init + v_x*t # actual x coordinate of target
+        y = y_init + v_y*t # actual y coordinate of target
+        i = int(y_init) + int(v_y*t) # the row position of the target for animation
+        j = int(x_init) + int(v_x*t) # the col position of the target for animation
         for elem in np.linspace(0, self.T, 1000):
             x_new = x_init + v_x*elem
             y_new = y_init + v_y*elem
             if x_new <= self.num_cells and x_new >=0 and y_new <= self.num_cells and y_new >= 0:
-                X.append(x_new)
+                X.append(x_new) # a continuous solid curve for the path for animation
                 Y.append(y_new)
         if i < self.num_cells and i >= 0 and j < self.num_cells and j >=0:
-            M[i, j, t] = 1
-        return (M, X, Y, i, j) 
+            self.M[i, j, t] = 1
+        return [x, y, X, Y, i, j] 
 
-# A function to visualize what is happening
+    def add_circle_trajectories(self, x_center, y_center, R, theta_init, spd): # user can add circle trajectories
+        self.circle_trajectories.append([x_center, y_center, R, theta_init, spd])
 
-def visualize(Cells, T, P):
-    M = np.zeros((Cells, Cells, T))
-    for k in range(0, T):
-        t = k
-        M, X_1, Y_1, i_1, j_1 = P.circle(M, 50, 50, 20, 0, 5, t)
-        M, X_2, Y_2, i_2, j_2 = P.line(M, 0, 0, 1, 0.5, t)
-        M, X_3, Y_3, i_3, j_3 = P.line(M, 20, 99, -0.2, -1.25, t)
-        M, X_4, Y_4, i_4, j_4 = P.circle(M, 70, 70, 10, 0, -3, t)
-        M, X_5, Y_5, i_5, j_5 = P.circle(M, 80, 20, 10, 1.7, 3, t)
+    def add_line_trajectories(self, x_init, y_init, v_x, v_y): # user can add line trajectories
+        self.line_trajectories.append([x_init, y_init, v_x, v_y])
 
-    # Animate everything
+    def create_coord_matrix(self):
+        coord_matrix = []
+        for i in range(len(self.circle_trajectories)):
+            coord_matrix.append([])
+            cr_in = self.circle_trajectories[i]
+            for k in range(self.T):
+                t = k
+                cr = (self.circle(cr_in[0], cr_in[1], cr_in[2], cr_in[3], cr_in[4], t)[0], 
+                self.circle(cr_in[0], cr_in[1], cr_in[2], cr_in[3], cr_in[4], t)[1])
+                coord_matrix[i].append(cr)
+        for i in range(len(self.line_trajectories)):
+            coord_matrix.append([])
+            ln_in = self.line_trajectories[i]
+            for k in range(self.T):
+                t = k
+                ln = (self.line(ln_in[0], ln_in[1], ln_in[2], ln_in[3], t)[0], 
+                self.line(ln_in[0], ln_in[1], ln_in[2], ln_in[3], t)[1])
+                coord_matrix[i].append(ln)
+        return coord_matrix
 
-    fig = plt.figure()
-    im = plt.imshow(M[:,:,0], interpolation="none", cmap="Reds")
-    title = plt.title("")
+    def plot_trajectories(self):
+        plot_matrix_X = []
+        plot_matrix_Y = []
+        for i in range(len(self.circle_trajectories)):
+            cr_in = self.circle_trajectories[i]
+            plot_matrix_X.append(self.circle(cr_in[0], cr_in[1], cr_in[2], cr_in[3], cr_in[4], 0)[2])
+            plot_matrix_Y.append(self.circle(cr_in[0], cr_in[1], cr_in[2], cr_in[3], cr_in[4], 0)[3])
+        for i in range(len(self.line_trajectories)):
+            ln_in = self.line_trajectories[i]
+            plot_matrix_X.append(self.line(ln_in[0], ln_in[1], ln_in[2], ln_in[3], 0)[2])
+            plot_matrix_Y.append(self.line(ln_in[0], ln_in[1], ln_in[2], ln_in[3], 0)[3])
+        return [plot_matrix_X, plot_matrix_Y]
 
-    def update(t):
-        im.set_array(M[:,:,t])
-        title.set_text("Time = " + str(t) + " s")
+    def visualize(self):
+        # Animate everything
+        fig = plt.figure()
+        im = plt.imshow(self.M[:,:,0], interpolation="none", cmap="Reds")
+        title = plt.title("")
+        def update(t):
+            im.set_array(self.M[:,:,t])
+            title.set_text("Time = " + str(t) + " s")
+        ani = matplotlib.animation.FuncAnimation(fig, func=update, frames=self.T, repeat=False, interval=400)
+        # Plot the circle and line paths the object moves over
+        for i in range(len(self.plot_trajectories()[0])):
+            plt.plot(self.plot_trajectories()[0][i], self.plot_trajectories()[1][i]) 
+        plt.xlabel('x (m)')
+        plt.ylabel('y (m)')
+        plt.show()
+        # Save the animation in MP4 format
+        f = r"/home/nykabhishek/George_Allen/Research_slides/mar_11_2022.mp4" 
+        writervideo = matplotlib.animation.FFMpegWriter(fps=3) 
+        ani.save(f, writer=writervideo)
 
-    ani = matplotlib.animation.FuncAnimation(fig, func=update, frames=T, repeat=False, interval=400)
-
-    # Plot the circle and line paths the object moves over
-                       
-    plt.plot(X_1, Y_1)
-    plt.plot(X_2, Y_2)
-    plt.plot(X_3, Y_3)
-    plt.plot(X_4, Y_4)
-    plt.plot(X_5, Y_5)
-    plt.xlabel('x (m)')
-    plt.ylabel('y (m)')
-    plt.show()
-
-    # Save the animation in MP4 format
-
-    f = r"/home/nykabhishek/George_Allen/Research_slides/mar_02_2022.mp4" 
-    writervideo = matplotlib.animation.FFMpegWriter(fps=3) 
-    ani.save(f, writer=writervideo)
-    
-
-# Testing
-
-Cells = 100
-T = 100
-P = Paths(Cells, T)
-visualize(Cells, T, P)
+    def problem_graph(self):
+        pass
 
 
 
 
+
+
+
+
+
+# Test everything out here
+P = Moving_TSP(100, 100)
+P.add_circle_trajectories(70, 70, 10, 0, -3)
+P.add_circle_trajectories(80, 20, 10, 1.7, 3)
+P.add_circle_trajectories(50, 50, 20, 0, 5)
+P.add_line_trajectories(0, 0, 1, 0.5)
+P.add_line_trajectories(20, 99, -0.2, -1.25)
+print(P.circle_trajectories)
+A = P.circle(70, 70, 10, 0, -3, 0)    
+print(A[0])    
+coord_matrix = P.create_coord_matrix()
+#print(coord_matrix)    
+P.visualize()
