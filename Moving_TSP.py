@@ -60,6 +60,8 @@ def visualize(Cells, T, P):
         title.set_text("Time = " + str(t) + " s")
 
     ani = matplotlib.animation.FuncAnimation(fig, func=update, frames=T, repeat=False, interval=400)
+
+    # Plot the circle and line paths the object moves over
                        
     plt.plot(X_1, Y_1)
     plt.plot(X_2, Y_2)
@@ -70,9 +72,20 @@ def visualize(Cells, T, P):
     plt.ylabel('y (m)')
     plt.show()
 
+    # Save the animation in MP4 format
+
+    f = r"/home/nykabhishek/George_Allen/Research_slides/mar_02_2022.mp4" 
+    writervideo = matplotlib.animation.FFMpegWriter(fps=3) 
+    ani.save(f, writer=writervideo)
+    
+
 # Testing
 
 Cells = 100
 T = 100
 P = Paths(Cells, T)
 visualize(Cells, T, P)
+
+
+
+
