@@ -1,6 +1,8 @@
 import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
+import subprocess
+import random
 
 # Create a file generator class for LKH
 
@@ -269,24 +271,49 @@ class Moving_TSP:
         plt.title('Feasible solution to Moving TSP')
         plt.show()
 
+    def create_test_instance(self, len_cir, len_lin):
+        Cir_Matrix = []
+        Lin_Matrix = []
+        for i in range(len_cir):
+            cir_center_x = random.uniform(20, 78)
+            cir_center_y = random.uniform(20, 78)
+            cir_radius = random.uniform(5, 20)
+            cir_init_angle = random.uniform(-np.pi, np.pi)
+            cir_spd = round(random.choice([random.uniform(1, 5), random.uniform(-1, -5)]), 2)
+            Cir_Matrix.append([cir_center_x, cir_center_y, cir_radius, cir_init_angle, cir_spd])
+        for i in range(len_lin):
+            lin_start_x = random.uniform(0, 100)
+            lin_start_y = random.uniform(0, 100)
+            lin_v_x = round(random.uniform(0.1, 1) if lin_start_x <= 50 else random.uniform(-0.1, -1), 2)
+            lin_v_y = round(random.uniform(0.1, 1) if lin_start_y <= 50 else random.uniform(-0.1, -1), 2)
+            Lin_Matrix.append([lin_start_x, lin_start_y, lin_v_x, lin_v_y])
+        m = len_cir + len_lin
+        return [Cir_Matrix, Lin_Matrix, m]
+        
 # Test everything out here
 
-V = [[10, 10, 300]]
-P = Moving_TSP(100, 100, 5, V)
-P.add_circle_trajectories(70, 70, 10, 0, -3)
-P.add_circle_trajectories(80, 20, 10, 1.7, 3)
-P.add_circle_trajectories(50, 50, 20, 0, 5)
-P.add_line_trajectories(0, 0, 1, 0.5)
-P.add_line_trajectories(20, 99, -0.2, -1.25)
+V = [[10, 10, 30]]
+P = Moving_TSP(100, 100, 6, V)
+Test = P.create_test_instance(3, 3)
+for i in range(len(Test[0])):
+    P.add_circle_trajectories(Test[0][i][0], Test[0][i][1], Test[0][i][2], Test[0][i][3], Test[0][i][4])
+for i in range(len(Test[1])):
+    P.add_line_trajectories(Test[1][i][0], Test[1][i][1], Test[1][i][2], Test[1][i][3])
+#P.add_circle_trajectories(70, 70, 10, 0, -3)
+#P.add_circle_trajectories(80, 20, 10, 1.7, 3)
+#P.add_circle_trajectories(50, 50, 20, 0, 5)
+#P.add_line_trajectories(0, 0, 1, 0.5)
+#P.add_line_trajectories(20, 99, -0.2, -1.25)
 #P.add_line_trajectories(50, 50, 1, 0)
 coord_matrix = P.create_coord_matrix()  
 P.visualize()
 graph_1 = P.problem_graph_1()
-
 LKH_1 = LKH_file_generator(graph_1, '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1.tsp', 
 '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1.par', '/home/nykabhishek/George_Allen/LKH/LKH-2.0.9/test_1sol')
 LKH_1.create_cost_matrix_TSP()
 LKH_1.create_cost_matrix_PAR()
+cmd = ["./LKH", "test_1"+".par"]
+process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+process.wait() 
 F = LKH_1.read_sol()
-
 P.plot_feasible_sol_1(F, coord_matrix)
